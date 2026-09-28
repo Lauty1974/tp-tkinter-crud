@@ -1,25 +1,29 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from base_datos import BaseDatos
+
 
 class CRUD:
-    def __init__(self, titulo, campos):
+    def __init__(self, ventana, titulo, campos, tabla_bd):
+        self.ventana = ventana
         self.titulo = titulo
         self.campos = campos
+        self.tabla_bd = tabla_bd
 
-        self.ventana = tk.Tk()
-        self.ventana.title(self.titulo)
-        self.ventana.geometry("650x450")
+        self.base_datos = BaseDatos()
 
         self.entradas = {}
-        self.registros = []
         self.seleccionado = None
+        self.id_seleccionado = None
 
+        # Generación dinámica de Labels y Entries
         for i, campo in enumerate(self.campos):
             etiqueta = tk.Label(
                 self.ventana,
-                text=campo
+                text=campo.upper()
             )
+
             etiqueta.grid(
                 row=i,
                 column=0,
@@ -30,6 +34,7 @@ class CRUD:
             entrada = tk.Entry(
                 self.ventana
             )
+
             entrada.grid(
                 row=i,
                 column=1,
@@ -39,11 +44,12 @@ class CRUD:
 
             self.entradas[campo] = entrada
 
+        # Botones
         fila_botones = len(self.campos)
 
         tk.Button(
             self.ventana,
-            text="Crear",
+            text="CREAR",
             command=self.crear
         ).grid(
             row=fila_botones,
@@ -54,7 +60,7 @@ class CRUD:
 
         tk.Button(
             self.ventana,
-            text="Actualizar",
+            text="ACTUALIZAR",
             command=self.actualizar
         ).grid(
             row=fila_botones,
@@ -65,7 +71,7 @@ class CRUD:
 
         tk.Button(
             self.ventana,
-            text="Eliminar",
+            text="ELIMINAR",
             command=self.eliminar
         ).grid(
             row=fila_botones,
@@ -74,6 +80,7 @@ class CRUD:
             pady=10
         )
 
+        # Tabla
         self.tabla = ttk.Treeview(
             self.ventana,
             columns=self.campos,
@@ -83,7 +90,7 @@ class CRUD:
         for campo in self.campos:
             self.tabla.heading(
                 campo,
-                text=campo
+                text=campo.upper()
             )
 
             self.tabla.column(
@@ -99,11 +106,36 @@ class CRUD:
             pady=10
         )
 
-        # Detectar selec tabla
         self.tabla.bind(
             "<<TreeviewSelect>>",
             self.seleccionar
         )
+
+        self.cargar_datos()
+
+    # -------------------------
+    # CARGAR DATOS
+    # -------------------------
+
+    def cargar_datos(self):
+        registros = self.base_datos.obtener_todos(
+            self.tabla_bd
+        )
+
+        for registro in registros:
+            id_registro = registro[0]
+            valores = registro[1:]
+
+            self.tabla.insert(
+                "",
+                tk.END,
+                iid=str(id_registro),
+                values=valores
+            )
+
+    # -------------------------
+    # CREAR
+    # -------------------------
 
     def crear(self):
         datos = {}
@@ -113,27 +145,29 @@ class CRUD:
 
             if valor == "":
                 messagebox.showwarning(
-                    "Campos vacíos",
-                    "Complete todos los campos."
+                    "CAMPOS VACÍOS",
+                    "COMPLETE TODOS LOS CAMPOS."
                 )
                 return
 
             datos[campo] = valor
 
-        self.registros.append(datos)
-
-        self.tabla.insert(
-            "",
-            tk.END,
-            values=list(datos.values())
+        self.base_datos.crear(
+            self.tabla_bd,
+            datos
         )
 
         self.limpiar()
+        self.recargar_tabla()
 
         messagebox.showinfo(
-            "Éxito",
-            "Registro creado correctamente."
+            "ÉXITO",
+            "REGISTRO CREADO CORRECTAMENTE."
         )
+
+    # -------------------------
+    # SELECCIONAR
+    # -------------------------
 
     def seleccionar(self, evento):
         seleccion = self.tabla.selection()
@@ -142,21 +176,38 @@ class CRUD:
             return
 
         self.seleccionado = seleccion[0]
+        self.id_seleccionado = int(
+            self.seleccionado
+        )
 
         valores = self.tabla.item(
             self.seleccionado,
             "values"
         )
 
-        for campo, valor in zip(self.campos, valores):
-            self.entradas[campo].delete(0, tk.END)
-            self.entradas[campo].insert(0, valor)
+        for campo, valor in zip(
+            self.campos,
+            valores
+        ):
+            self.entradas[campo].delete(
+                0,
+                tk.END
+            )
+
+            self.entradas[campo].insert(
+                0,
+                valor
+            )
+
+    # -------------------------
+    # ACTUALIZAR
+    # -------------------------
 
     def actualizar(self):
-        if self.seleccionado is None:
+        if self.id_seleccionado is None:
             messagebox.showwarning(
-                "Sin selección",
-                "Seleccione un registro para actualizar."
+                "SIN SELECCIÓN",
+                "SELECCIONE UN REGISTRO PARA ACTUALIZAR."
             )
             return
 
@@ -167,72 +218,80 @@ class CRUD:
 
             if valor == "":
                 messagebox.showwarning(
-                    "Campos vacíos",
-                    "Complete todos los campos."
+                    "CAMPOS VACÍOS",
+                    "COMPLETE TODOS LOS CAMPOS."
                 )
                 return
 
             datos[campo] = valor
 
-        # Actualizo registros
-        indice = self.tabla.index(
-            self.seleccionado
-        )
-
-        self.registros[indice] = datos
-
-        # Actualizo tabla
-        self.tabla.item(
-            self.seleccionado,
-            values=list(datos.values())
+        self.base_datos.actualizar(
+            self.tabla_bd,
+            self.id_seleccionado,
+            datos
         )
 
         self.limpiar()
+        self.recargar_tabla()
 
         messagebox.showinfo(
-            "Éxito",
-            "Registro actualizado correctamente."
+            "ÉXITO",
+            "REGISTRO ACTUALIZADO CORRECTAMENTE."
         )
 
+    # -------------------------
+    # ELIMINAR
+    # -------------------------
+
     def eliminar(self):
-        if self.seleccionado is None:
+        if self.id_seleccionado is None:
             messagebox.showwarning(
-                "Sin selección",
-                "Seleccione un registro para eliminar."
+                "SIN SELECCIÓN",
+                "SELECCIONE UN REGISTRO PARA ELIMINAR."
             )
             return
 
         respuesta = messagebox.askyesno(
-            "Confirmar",
-            "¿Está seguro de eliminar el registro?"
+            "CONFIRMAR",
+            "¿ESTÁ SEGURO DE ELIMINAR EL REGISTRO?"
         )
 
         if not respuesta:
             return
 
-        indice = self.tabla.index(
-            self.seleccionado
+        self.base_datos.eliminar(
+            self.tabla_bd,
+            self.id_seleccionado
         )
-
-        self.registros.pop(indice)
-
-        self.tabla.delete(
-            self.seleccionado
-        )
-
-        self.seleccionado = None
 
         self.limpiar()
+        self.recargar_tabla()
 
         messagebox.showinfo(
-            "Éxito",
-            "Registro eliminado correctamente."
+            "ÉXITO",
+            "REGISTRO ELIMINADO CORRECTAMENTE."
         )
+
+    # -------------------------
+    # RECARGAR TABLA
+    # -------------------------
+
+    def recargar_tabla(self):
+        for elemento in self.tabla.get_children():
+            self.tabla.delete(elemento)
+
+        self.cargar_datos()
+
+    # -------------------------
+    # LIMPIAR
+    # -------------------------
+
     def limpiar(self):
         for entrada in self.entradas.values():
-            entrada.delete(0, tk.END)
+            entrada.delete(
+                0,
+                tk.END
+            )
 
         self.seleccionado = None
-
-    def ejecutar(self):
-        self.ventana.mainloop()
+        self.id_seleccionado = None

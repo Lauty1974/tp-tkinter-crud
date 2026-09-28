@@ -1,41 +1,27 @@
 import tkinter as tk
+from tkinter import ttk
+
 from crud import CRUD
 
 
 campos_vehiculos = [
-    "Patente",
-    "Marca",
-    "Modelo",
-    "Año"
+    "patente",
+    "marca",
+    "modelo",
+    "anio"
 ]
 
 campos_propietarios = [
-    "Nombre",
-    "Apellido",
-    "DNI",
-    "Teléfono"
+    "nombre",
+    "apellido",
+    "dni",
+    "telefono"
 ]
 
 
-def abrir_vehiculos():
-    vehiculos = CRUD(
-        "Vehículos",
-        campos_vehiculos
-    )
-    vehiculos.ejecutar()
-
-
-def abrir_propietarios():
-    propietarios = CRUD(
-        "Propietarios",
-        campos_propietarios
-    )
-    propietarios.ejecutar()
-
-
 ventana = tk.Tk()
-ventana.title("Sistema CRUD")
-ventana.geometry("300x200")
+ventana.title("SISTEMA CRUD")
+ventana.geometry("750x550")
 
 
 titulo = tk.Label(
@@ -43,25 +29,45 @@ titulo = tk.Label(
     text="SISTEMA CRUD"
 )
 
-titulo.pack(pady=20)
+titulo.pack(pady=10)
 
 
-boton_vehiculos = tk.Button(
-    ventana,
-    text="Vehículos",
-    command=abrir_vehiculos
+pestanas = ttk.Notebook(ventana)
+
+pestana_vehiculos = tk.Frame(pestanas)
+pestana_propietarios = tk.Frame(pestanas)
+
+pestanas.add(
+    pestana_vehiculos,
+    text="VEHÍCULOS"
 )
 
-boton_vehiculos.pack(pady=5)
-
-
-boton_propietarios = tk.Button(
-    ventana,
-    text="Propietarios",
-    command=abrir_propietarios
+pestanas.add(
+    pestana_propietarios,
+    text="PROPIETARIOS"
 )
 
-boton_propietarios.pack(pady=5)
+pestanas.pack(
+    expand=True,
+    fill="both",
+    padx=10,
+    pady=10
+)
+
+
+CRUD(
+    pestana_vehiculos,
+    "VEHÍCULOS",
+    campos_vehiculos,
+    "vehiculos"
+)
+
+CRUD(
+    pestana_propietarios,
+    "PROPIETARIOS",
+    campos_propietarios,
+    "propietarios"
+)
 
 
 ventana.mainloop()
